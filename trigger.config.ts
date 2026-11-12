@@ -10,7 +10,7 @@ export default defineConfig({
       // Copies the AI Gateway credentials from the local .env to the deployed
       // environment on every `trigger.dev deploy`.
       syncEnvVars(async () =>
-        ["NEON_AI_GATEWAY_TOKEN", "NEON_AI_GATEWAY_BASE_URL", "TELEGRAM_BOT_TOKEN"]
+        ["NEON_AI_GATEWAY_TOKEN", "NEON_AI_GATEWAY_BASE_URL", "TELEGRAM_BOT_TOKEN", "FIRECRAWL_API_KEY"]
           .filter((name) => process.env[name])
           .map((name) => ({ name, value: process.env[name]! }))
       ),

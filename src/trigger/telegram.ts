@@ -1,6 +1,9 @@
 import { webhooks } from "@trigger.dev/sdk";
 import { chat, defaultStorage } from "@trigger.dev/sdk/ai";
 import { neon } from "@neon/ai-sdk-provider";
+import { isStepCount } from "ai";
+import { firecrawlTools } from "./firecrawl-tools.js";
+import { telegramInstructions } from "./telegram-instructions.js";
 
 type TelegramUpdate = {
   update_id: number;
@@ -77,11 +80,12 @@ export const telegramAgent = chat.agent({
   channels: [telegramChannel],
   run: async ({ messages, signal, streamText }) =>
     streamText({
-      model: neon(process.env.AI_MODEL ?? "gemini-3-5-flash-lite"),
-      instructions:
-        "You are a helpful assistant chatting in Telegram. Keep answers short and plain-text.",
+      model: neon(process.env.AI_MODEL ?? "gpt-5-mini"),
+      instructions: telegramInstructions,
       messages,
-      maxOutputTokens: 500,
+      tools: firecrawlTools,
+      stopWhen: isStepCount(8),
+      maxOutputTokens: 2000, // headroom for reasoning models; answers are kept short by the instructions
       abortSignal: signal,
     }),
 });
