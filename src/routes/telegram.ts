@@ -11,6 +11,12 @@ export type TelegramGatewayDeps = {
   claimUpdate: (updateId: number) => Promise<boolean>
   /** Gives an update id back when we failed to accept it, so Telegram's retry is processed. */
   releaseUpdate: (updateId: number) => Promise<void>
+  /** Whether this Clerk user is on the paid plan. Throwing means "unknown": the update is retried, never let through. */
+  hasRequiredPlan: (clerkUserId: string) => Promise<boolean>
+  /** Uses up one of an unsubscribed user's free chats this month. False means none are left. */
+  consumeFreeMessage: (clerkUserId: string) => Promise<boolean>
+  /** Tells a linked user who is out of free chats where to upgrade. */
+  sendUpgradePrompt: (input: { chatId: number }) => Promise<void>
   /** Queues the agent's turn and returns at once; the answer is sent from the background. */
   handleKnownUser: (input: { message: TelegramMessage; clerkUserId: string }) => void
   /** Starts the "connect your account" flow for a stranger. Must be safe to call repeatedly. */
@@ -23,7 +29,7 @@ const safeEqual = (a: string, b: string) => {
   return ba.length === bb.length && timingSafeEqual(ba, bb)
 }
 
-// Telegram's webhook points here. Only people linked to a Clerk user reach the agent.
+// Telegram's webhook points here. Only people linked to a Clerk user with the paid plan reach the agent.
 export const createTelegramRoutes = (deps: TelegramGatewayDeps) => {
   const routes = new Hono()
 
@@ -61,6 +67,13 @@ export const createTelegramRoutes = (deps: TelegramGatewayDeps) => {
         return c.json({ ok: true, duplicate: true })
       }
       try {
+        // Subscription gate: subscribers always get the agent. Everyone else gets a monthly allowance of free
+        // chats, and once it is used up, an upgrade link instead of the agent.
+        const subscribed = await deps.hasRequiredPlan(clerkUserId)
+        if (!subscribed && !(await deps.consumeFreeMessage(clerkUserId))) {
+          await deps.sendUpgradePrompt({ chatId: chat.id })
+          return c.json({ ok: true, subscribed: false })
+        }
         deps.handleKnownUser({ message, clerkUserId })
       } catch (err) {
         if (typeof updateId === 'number') await deps.releaseUpdate(updateId).catch(() => {})

@@ -16,7 +16,7 @@ export default defineConfig({
   out: "./drizzle",
   dialect: "postgresql",
   // Only manage the tables this app owns, so `drizzle-kit push` never drops anything else.
-  tablesFilter: ["channel_identifiers", "conversation_messages", "telegram_updates", "pending_links"],
+  tablesFilter: ["channel_identifiers", "conversation_messages", "telegram_updates", "pending_links", "free_usage"],
   // Migrations need the direct (non-pooled) connection.
   dbCredentials: { url: process.env.DATABASE_URL_UNPOOLED },
 });

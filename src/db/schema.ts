@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { bigint, check, index, integer, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import { bigint, check, index, integer, pgTable, primaryKey, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 
 // Links a chat-platform identity to the Clerk user who owns it, so inbound
 // messages can be tied to an authenticated account.
@@ -50,6 +50,18 @@ export const telegramUpdates = pgTable("telegram_updates", {
   updateId: bigint("update_id", { mode: "number" }).primaryKey(),
   receivedAt: timestamp("received_at", { withTimezone: true }).notNull().defaultNow(),
 });
+
+// How many free chats a user without the paid plan has used in a calendar month (UTC, "YYYY-MM").
+// One row per user per month, so the allowance resets by itself when the month changes.
+export const freeUsage = pgTable(
+  "free_usage",
+  {
+    clerkUserId: text("clerk_user_id").notNull(),
+    period: text("period").notNull(),
+    used: integer("used").notNull().default(0),
+  },
+  (table) => [primaryKey({ columns: [table.clerkUserId, table.period] }), check("free_usage_used_check", sql`${table.used} >= 0`)]
+);
 
 // A "connect your account" flow that is waiting for the person to approve it in Clerk. Kept in the database
 // so it survives restarts, and so only one flow per Telegram user is ever open.

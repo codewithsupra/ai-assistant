@@ -1,6 +1,9 @@
 import { startAccountLink } from '../agent/account-link.js'
+import { accountPortalBillingUrl, hasPlan, upgradeMessage } from '../agent/billing.js'
+import { sendTelegramMessage } from '../agent/telegram-api.js'
 import { runTurn } from '../agent/run-turn.js'
 import { createTurnQueue } from '../agent/turn-queue.js'
+import { consumeFreeMessage, freeMessageLimit } from '../db/free-usage.js'
 import { findClerkUserId } from '../db/identities.js'
 import { claimUpdate, releaseUpdate } from '../db/updates.js'
 import type { TelegramGatewayDeps } from './telegram.js'
@@ -16,6 +19,16 @@ export const realTelegramDeps: TelegramGatewayDeps = {
 
   claimUpdate,
   releaseUpdate,
+
+  hasRequiredPlan: (clerkUserId) => hasPlan(clerkUserId),
+
+  consumeFreeMessage: (clerkUserId) => consumeFreeMessage(clerkUserId),
+
+  sendUpgradePrompt: async ({ chatId }) => {
+    await sendTelegramMessage(chatId, upgradeMessage(freeMessageLimit()), {
+      button: { text: 'Upgrade to Pro', url: await accountPortalBillingUrl() }
+    })
+  },
 
   handleKnownUser: ({ message, clerkUserId }) =>
     turnQueue.enqueue(`${clerkUserId}:${message.chat.id}`, () => runTurn({ clerkUserId, chatId: message.chat.id, message })),
