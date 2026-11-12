@@ -20,19 +20,22 @@ const assertOk = async (res: Response, what: string) => {
   throw new Error(`${what} failed: ${res.status} ${await res.text()}`);
 };
 
-// The agent session id is "telegram-<chat id>" (see the channel key); group chat ids are negative.
-export const telegramChatIdFromSession = (sessionChatId: string) => {
-  const match = /^telegram-(-?\d+)$/.exec(sessionChatId);
-  if (!match) throw new Error(`Not a Telegram session id: ${sessionChatId}`);
-  return Number(match[1]);
-};
-
-export const sendTelegramMessage = async (chatId: number, text: string) => {
+export const sendTelegramMessage = async (
+  chatId: number,
+  text: string,
+  options?: { button?: { text: string; url: string } }
+) => {
   const res = await assertOk(
     await fetch(apiUrl("sendMessage"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ chat_id: chatId, text: text.slice(0, TELEGRAM_MAX_LENGTH) }),
+      body: JSON.stringify({
+        chat_id: chatId,
+        text: text.slice(0, TELEGRAM_MAX_LENGTH),
+        ...(options?.button
+          ? { reply_markup: { inline_keyboard: [[{ text: options.button.text, url: options.button.url }]] } }
+          : {}),
+      }),
     }),
     "Telegram sendMessage"
   );

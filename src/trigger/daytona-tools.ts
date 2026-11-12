@@ -1,12 +1,8 @@
 import { tool } from "ai";
 import { z } from "zod";
 import { Daytona, DaytonaNotFoundError, type Sandbox } from "@daytona/sdk";
-import {
-  downloadTelegramFile,
-  sendTelegramFile,
-  TELEGRAM_MAX_DOWNLOAD_BYTES,
-  telegramChatIdFromSession,
-} from "./telegram-api.js";
+import { parseSessionId, sandboxNameFor } from "./session-id.js";
+import { downloadTelegramFile, sendTelegramFile, TELEGRAM_MAX_DOWNLOAD_BYTES } from "./telegram-api.js";
 
 const MAX_OUTPUT_CHARS = 6000;
 const HOME = "/home/daytona";
@@ -33,11 +29,11 @@ const getDaytona = () => {
   return daytona;
 };
 
-// One persistent sandbox per Telegram chat, found by name so no database is needed.
+// One persistent sandbox per Clerk user, found by a name derived from the Clerk user id, so no database is needed.
 // Its files survive between messages; it auto-stops when idle and is restarted on demand.
-const ensureSandbox = async (sessionChatId: string): Promise<Sandbox> => {
+const ensureSandbox = async (clerkUserId: string): Promise<Sandbox> => {
   const client = getDaytona();
-  const name = `tg-${sessionChatId.replace(/^telegram-/, "").replace("-", "g")}`;
+  const name = sandboxNameFor(clerkUserId);
   let sandbox: Sandbox;
   try {
     sandbox = await client.get(name);
@@ -45,7 +41,7 @@ const ensureSandbox = async (sessionChatId: string): Promise<Sandbox> => {
     if (!(err instanceof DaytonaNotFoundError)) throw err;
     sandbox = await client.create({
       name,
-      labels: { app: "telegram-agent" },
+      labels: { app: "telegram-agent", clerkUserId },
       autoStopInterval: 15,
     });
   }
@@ -54,11 +50,12 @@ const ensureSandbox = async (sessionChatId: string): Promise<Sandbox> => {
 };
 
 export const createDaytonaTools = (sessionChatId: string) => {
-  const telegramChatId = telegramChatIdFromSession(sessionChatId);
+  // Throws unless the session belongs to a linked Clerk user in a private Telegram chat.
+  const { clerkUserId, telegramChatId } = parseSessionId(sessionChatId);
 
-  // Resolved lazily and once per turn, so chats that never need a sandbox never create one.
+  // Resolved lazily and once per turn, so users who never need a sandbox never create one.
   let sandboxPromise: Promise<Sandbox> | undefined;
-  const sandbox = () => (sandboxPromise ??= ensureSandbox(sessionChatId));
+  const sandbox = () => (sandboxPromise ??= ensureSandbox(clerkUserId));
 
   let desktopStarted = false;
   const desktop = async () => {

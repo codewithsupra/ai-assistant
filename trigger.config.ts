@@ -7,10 +7,20 @@ export default defineConfig({
   runtime: "node",
   build: {
     extensions: [
-      // Copies the AI Gateway credentials from the local .env to the deployed
-      // environment on every `trigger.dev deploy`.
+      // Copies the variables the tasks read from the local .env to the deployed
+      // environment on every `trigger.dev deploy`. TRIGGER_SECRET_KEY and
+      // CLERK_SECRET_KEY are deliberately not here: tasks never need them.
       syncEnvVars(async () =>
-        ["NEON_AI_GATEWAY_TOKEN", "NEON_AI_GATEWAY_BASE_URL", "TELEGRAM_BOT_TOKEN", "FIRECRAWL_API_KEY", "DAYTONA_API_KEY"]
+        [
+          "NEON_AI_GATEWAY_TOKEN",
+          "NEON_AI_GATEWAY_BASE_URL",
+          "TELEGRAM_BOT_TOKEN",
+          "FIRECRAWL_API_KEY",
+          "DAYTONA_API_KEY",
+          "DATABASE_URL",
+          "CLERK_PUBLISHABLE_KEY",
+          "CLERK_OAUTH_CLIENT_ID",
+        ]
           .filter((name) => process.env[name])
           .map((name) => ({ name, value: process.env[name]! }))
       ),

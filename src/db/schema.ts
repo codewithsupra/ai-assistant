@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { check, index, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { check, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 
 // Links a chat-platform identity to the Clerk user who owns it, so inbound
 // messages can be tied to an authenticated account.
@@ -17,7 +17,8 @@ export const channelIdentifiers = pgTable(
   },
   (table) => [
     check("channel_identifiers_platform_check", sql`${table.platform} = 'telegram'`),
-    index("channel_identifiers_platform_external_id_idx").on(table.platform, table.externalId),
+    // Unique: one chat-platform identity maps to exactly one Clerk user, so the lookup is never ambiguous.
+    uniqueIndex("channel_identifiers_platform_external_id_idx").on(table.platform, table.externalId),
   ]
 );
 

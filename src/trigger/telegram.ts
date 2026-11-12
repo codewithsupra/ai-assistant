@@ -13,7 +13,7 @@ type TelegramMessage = {
   message_id: number;
   text?: string;
   caption?: string;
-  chat: { id: number };
+  chat: { id: number; type?: string };
   from?: { id: number };
   document?: TelegramFile;
   photo?: Array<{ file_id: string; file_size?: number; width: number; height: number }>;
@@ -26,6 +26,8 @@ type TelegramMessage = {
 type TelegramUpdate = {
   update_id: number;
   message?: TelegramMessage;
+  /** Added by our Hono gateway after it finds the sender in the database. Never present on a raw Telegram update. */
+  clerk_user_id?: string;
 };
 
 type Attachment = { fileId: string; name: string; mediaType: string; size?: number };
@@ -110,7 +112,11 @@ const mediaTypeFromPath = (path: string) => {
 const telegramChannel = chat.channels.custom({
   id: "telegram",
   endpoint: telegramEndpoint,
-  key: "telegram-{event.message.chat.id}",
+  // Only updates the Hono gateway has tied to a Clerk user, from a private chat, reach the agent.
+  // Anything else is recorded as FILTERED and no agent run starts.
+  filter: "event.clerk_user_id startsWith 'user_' && event.message.chat.type == 'private'",
+  // One conversation per Clerk user per private chat. Must stay in sync with parseSessionId (session-id.ts).
+  key: "clerk-{event.clerk_user_id}-telegram-{event.message.chat.id}",
   // Updates with nothing to answer (stickers, edits, ...) map to an empty message, which runs no turn.
   inbound: (e) => ({
     message: e.message ? toUserMessage(e.message) : "",
