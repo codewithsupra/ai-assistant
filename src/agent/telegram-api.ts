@@ -89,3 +89,35 @@ export const sendTelegramFile = async (
   );
   return { sentAs: asPhoto ? "photo" : "document" };
 };
+
+// Splits a long reply into Telegram-sized messages, preferring paragraph, then line, then word boundaries.
+export const splitForTelegram = (text: string, max = TELEGRAM_MAX_LENGTH): string[] => {
+  const chunks: string[] = [];
+  let rest = text.trim();
+  while (rest.length > max) {
+    const window = rest.slice(0, max);
+    const cut = Math.max(window.lastIndexOf("\n\n"), window.lastIndexOf("\n"), window.lastIndexOf(" "));
+    const at = cut > max * 0.5 ? cut : max; // only break on a boundary if it is not too early
+    chunks.push(rest.slice(0, at).trim());
+    rest = rest.slice(at).trim();
+  }
+  if (rest) chunks.push(rest);
+  return chunks;
+};
+
+// Sends text of any length as one or more messages, in order.
+export const sendTelegramText = async (chatId: number, text: string) => {
+  for (const chunk of splitForTelegram(text)) await sendTelegramMessage(chatId, chunk);
+};
+
+// Shows "typing..." in the chat for a few seconds.
+export const sendTelegramChatAction = async (chatId: number, action: "typing" = "typing") => {
+  await assertOk(
+    await fetch(apiUrl("sendChatAction"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ chat_id: chatId, action }),
+    }),
+    "Telegram sendChatAction"
+  );
+};

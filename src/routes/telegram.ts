@@ -1,22 +1,18 @@
 import { Hono } from 'hono'
 import { timingSafeEqual } from 'node:crypto'
-
-type TelegramUpdate = {
-  update_id?: number
-  message?: {
-    message_id: number
-    chat?: { id: number; type?: string }
-    from?: { id: number; is_bot?: boolean }
-  }
-}
+import type { TelegramMessage, TelegramUpdate } from '../agent/telegram-message.js'
 
 export type TelegramGatewayDeps = {
   /** The secret Telegram sends in X-Telegram-Bot-Api-Secret-Token (set with setWebhook). */
   webhookSecret: () => string | undefined
   /** The Clerk user a Telegram user is linked to, or null for a stranger. */
   lookupClerkUserId: (telegramUserId: string) => Promise<string | null>
-  /** Delivers an update, with the Clerk user id attached, to the Trigger.dev webhook. Throws on failure. */
-  forwardToTrigger: (update: Record<string, unknown>) => Promise<void>
+  /** Records an update id. False means it was already accepted, so Telegram is redelivering it. */
+  claimUpdate: (updateId: number) => Promise<boolean>
+  /** Gives an update id back when we failed to accept it, so Telegram's retry is processed. */
+  releaseUpdate: (updateId: number) => Promise<void>
+  /** Queues the agent's turn and returns at once; the answer is sent from the background. */
+  handleKnownUser: (input: { message: TelegramMessage; clerkUserId: string }) => void
   /** Starts the "connect your account" flow for a stranger. Must be safe to call repeatedly. */
   startAccountLink: (input: { telegramUserId: string; chatId: number }) => Promise<void>
 }
@@ -27,7 +23,7 @@ const safeEqual = (a: string, b: string) => {
   return ba.length === bb.length && timingSafeEqual(ba, bb)
 }
 
-// Telegram's webhook points here, not at Trigger.dev. Only people linked to a Clerk user reach the agent.
+// Telegram's webhook points here. Only people linked to a Clerk user reach the agent.
 export const createTelegramRoutes = (deps: TelegramGatewayDeps) => {
   const routes = new Hono()
 
@@ -38,7 +34,7 @@ export const createTelegramRoutes = (deps: TelegramGatewayDeps) => {
       return c.json({ error: 'Unauthorized' }, 401)
     }
 
-    let update: TelegramUpdate & Record<string, unknown>
+    let update: TelegramUpdate
     try {
       update = await c.req.json()
     } catch {
@@ -59,8 +55,17 @@ export const createTelegramRoutes = (deps: TelegramGatewayDeps) => {
     const clerkUserId = await deps.lookupClerkUserId(telegramUserId)
 
     if (clerkUserId) {
-      // The Clerk id is set last so it can never be overridden by anything in the incoming update.
-      await deps.forwardToTrigger({ ...update, clerk_user_id: clerkUserId })
+      // Telegram redelivers an update it did not get a fast 200 for. Answer each one once.
+      const updateId = update.update_id
+      if (typeof updateId === 'number' && !(await deps.claimUpdate(updateId))) {
+        return c.json({ ok: true, duplicate: true })
+      }
+      try {
+        deps.handleKnownUser({ message, clerkUserId })
+      } catch (err) {
+        if (typeof updateId === 'number') await deps.releaseUpdate(updateId).catch(() => {})
+        throw err
+      }
       return c.json({ ok: true })
     }
 

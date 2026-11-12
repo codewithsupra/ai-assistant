@@ -16,3 +16,11 @@ export const parseSessionId = (sessionId: string) => {
 // Deterministic, collision-free sandbox name per Clerk user (a hash, so any id spelling is safe in a name).
 export const sandboxNameFor = (clerkUserId: string) =>
   `cu-${createHash("sha256").update(clerkUserId).digest("hex").slice(0, 24)}`;
+
+// The id the agent tools use to identify a conversation: one Clerk user in one private Telegram chat.
+export const sessionIdFor = (clerkUserId: string, telegramChatId: number) => {
+  if (!CLERK_USER_ID_PATTERN.test(clerkUserId) || !Number.isInteger(telegramChatId) || telegramChatId <= 0) {
+    throw new Error("A conversation needs a Clerk user and a private chat");
+  }
+  return `clerk-${clerkUserId}-telegram-${telegramChatId}`;
+};

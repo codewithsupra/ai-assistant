@@ -5,8 +5,8 @@ import {
   fetchClerkUserId,
   pollDeviceToken,
   startDeviceAuthorization,
-} from "./clerk-device-flow.js";
-import { sendTelegramMessage } from "./telegram-api.js";
+} from "../agent/clerk-device-flow.js";
+import { sendTelegramMessage } from "../agent/telegram-api.js";
 
 export type ConnectTelegramPayload = {
   /** Telegram user id of the stranger (the same as the chat id in a private chat). */

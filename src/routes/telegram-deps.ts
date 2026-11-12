@@ -1,43 +1,26 @@
-import { idempotencyKeys, tasks } from '@trigger.dev/sdk'
+import { startAccountLink } from '../agent/account-link.js'
+import { runTurn } from '../agent/run-turn.js'
+import { createTurnQueue } from '../agent/turn-queue.js'
 import { findClerkUserId } from '../db/identities.js'
-import type { connectTelegramAccount } from '../trigger/connect-telegram.js'
+import { claimUpdate, releaseUpdate } from '../db/updates.js'
 import type { TelegramGatewayDeps } from './telegram.js'
 
-const requireEnv = (name: string) => {
-  const value = process.env[name]
-  if (!value) throw new Error(`${name} is not set`)
-  return value
-}
+// Agent turns run in this process, in the background. One at a time per conversation, a few at a time overall.
+export const turnQueue = createTurnQueue({ maxConcurrent: Number(process.env.AGENT_MAX_CONCURRENT_TURNS ?? 4) })
 
-// The real dependencies: Neon through Drizzle, the Trigger.dev webhook over HTTP, and the Trigger.dev API.
+// The real dependencies: Neon through Drizzle, and the agent running in-process.
 export const realTelegramDeps: TelegramGatewayDeps = {
   webhookSecret: () => process.env.TELEGRAM_WEBHOOK_SECRET,
 
   lookupClerkUserId: findClerkUserId,
 
-  forwardToTrigger: async (update) => {
-    const res = await fetch(requireEnv('TRIGGER_TELEGRAM_WEBHOOK_URL'), {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        // The Trigger.dev endpoint's own secret. It is deliberately not the secret Telegram knows.
-        'X-Telegram-Bot-Api-Secret-Token': requireEnv('TELEGRAM_FORWARD_SECRET')
-      },
-      body: JSON.stringify(update),
-      signal: AbortSignal.timeout(10_000)
-    })
-    if (!res.ok) throw new Error(`Trigger.dev webhook responded ${res.status}`)
-  },
+  claimUpdate,
+  releaseUpdate,
 
-  startAccountLink: async ({ telegramUserId, chatId }) => {
-    // One flow per person at a time: repeated messages inside the 10-minute code window start nothing new.
-    await tasks.trigger<typeof connectTelegramAccount>(
-      'connect-telegram-account',
-      { telegramUserId, chatId },
-      {
-        idempotencyKey: await idempotencyKeys.create(`connect-telegram-${telegramUserId}`, { scope: 'global' }),
-        idempotencyKeyTTL: '10m'
-      }
-    )
+  handleKnownUser: ({ message, clerkUserId }) =>
+    turnQueue.enqueue(`${clerkUserId}:${message.chat.id}`, () => runTurn({ clerkUserId, chatId: message.chat.id, message })),
+
+  startAccountLink: async (input) => {
+    await startAccountLink(input)
   }
 }
