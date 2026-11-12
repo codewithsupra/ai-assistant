@@ -7,7 +7,9 @@
     "set-webhook": "tsx --env-file=.env scripts/set-webhook.ts",
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit",
-    "start": "node dist/index.js"
+    "start": "node dist/index.js",
+    "test": "tsx --test tests/gateway.test.ts tests/billing.test.ts tests/site.test.ts tests/agent-helpers.test.ts",
+    "test:db": "tsx --env-file=.env --test tests/db.test.ts"
   },
   "dependencies": {
     "@daytona/sdk": "^0.231.1",
