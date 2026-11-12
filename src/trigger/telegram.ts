@@ -80,7 +80,7 @@ export const telegramAgent = chat.agent({
   channels: [telegramChannel],
   run: async ({ messages, signal, streamText }) =>
     streamText({
-      model: neon(process.env.AI_MODEL ?? "gpt-5-mini"),
+      model: neon(process.env.AI_MODEL ?? "claude-haiku-5-5"),
       instructions: telegramInstructions,
       messages,
       tools: firecrawlTools,
