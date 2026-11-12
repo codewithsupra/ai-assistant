@@ -7,12 +7,14 @@ import { realTelegramDeps } from './routes/telegram-deps.js'
 
 const app = new Hono()
 
-// The only page is static HTML with inline styles: no scripts, no frames, nothing loaded from elsewhere.
+// The only page is static HTML with inline styles: no scripts, no frames. The one outside load is the web font.
 app.use(
   secureHeaders({
     contentSecurityPolicy: {
       defaultSrc: ["'none'"],
-      styleSrc: ["'unsafe-inline'"],
+      styleSrc: ["'unsafe-inline'", 'https://fonts.googleapis.com'],
+      fontSrc: ['https://fonts.gstatic.com'],
+      imgSrc: ["'self'"],
       baseUri: ["'none'"],
       formAction: ["'none'"],
       frameAncestors: ["'none'"]

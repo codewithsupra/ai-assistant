@@ -15,10 +15,24 @@ describe('landing page', () => {
     assert.match(html, /<title>[^<]+<\/title>/)
     assert.match(html, /test mode/)
   })
-  it('loads nothing from other sites and runs no scripts', async () => {
+  it('loads only a web font from other sites and runs no scripts', async () => {
     const html = await (await app.request('/')).text()
     assert.doesNotMatch(html, /<script/i)
-    assert.doesNotMatch(html, /(src|href)="https?:\/\/(?!t\.me\/|github\.com\/codewithsupra\/)/i)
+    assert.doesNotMatch(html, /(src|href)="https?:\/\/(?!t\.me\/|github\.com\/codewithsupra\/|fonts\.(googleapis|gstatic)\.com)/i)
+  })
+})
+
+describe('open in Telegram', () => {
+  it('offers the web link, the app link and a scannable code', async () => {
+    const html = await (await app.request('/')).text()
+    assert.match(html, /href="https:\/\/t\.me\/cws_assist_bot" target="_blank"/)
+    assert.match(html, /href="tg:\/\/resolve\?domain=cws_assist_bot"/)
+    assert.match(html, /<svg[^>]*viewBox/)
+  })
+  it('serves a favicon', async () => {
+    const res = await app.request('/favicon.svg')
+    assert.equal(res.status, 200)
+    assert.match(res.headers.get('content-type') ?? '', /image\/svg\+xml/)
   })
 })
 
