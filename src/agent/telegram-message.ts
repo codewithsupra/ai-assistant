@@ -1,5 +1,4 @@
 // What a Telegram update looks like, and how a message with files is turned into text for the agent.
-// Shared by the Hono gateway (in-process agent) and the dormant Trigger.dev channel.
 
 export type TelegramFile = { file_id: string; file_name?: string; mime_type?: string; file_size?: number };
 
@@ -20,8 +19,6 @@ export type TelegramMessage = {
 export type TelegramUpdate = {
   update_id: number;
   message?: TelegramMessage;
-  /** Added by the Trigger.dev gateway path only. Never present on a raw Telegram update. */
-  clerk_user_id?: string;
 };
 
 export type Attachment = { fileId: string; name: string; mediaType: string; size?: number };

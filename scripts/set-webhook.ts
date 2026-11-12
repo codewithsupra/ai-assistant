@@ -1,5 +1,5 @@
-// Registers the Trigger.dev inbound webhook URL with Telegram.
-// Usage: npm run set-webhook -- <trigger.dev webhook URL for the "telegram" endpoint>
+// Registers the webhook URL with Telegram.
+// Usage: npm run set-webhook -- https://<your-host>/telegram/webhook
 const url = process.argv[2];
 const token = process.env.TELEGRAM_BOT_TOKEN;
 const secret = process.env.TELEGRAM_WEBHOOK_SECRET;

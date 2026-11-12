@@ -18,7 +18,7 @@ describe('landing page', () => {
   it('loads nothing from other sites and runs no scripts', async () => {
     const html = await (await app.request('/')).text()
     assert.doesNotMatch(html, /<script/i)
-    assert.doesNotMatch(html, /(src|href)="https?:\/\/(?!t\.me\/)/i)
+    assert.doesNotMatch(html, /(src|href)="https?:\/\/(?!t\.me\/|github\.com\/codewithsupra\/)/i)
   })
 })
 

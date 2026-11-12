@@ -2,8 +2,8 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 import * as schema from "./schema.js";
 
-// One pooled client per process (Trigger.dev workers load this module once and reuse it).
-// Keep the pool small: each concurrently executing run holds up to `max` connections.
+// One pooled client per process.
+// Keep the pool small: each concurrently running agent turn can hold a connection.
 const pool = new Pool({ connectionString: process.env.DATABASE_URL, max: Number(process.env.DATABASE_POOL_MAX ?? 3) });
 pool.on("error", (err) => console.error("pg pool error", err));
 

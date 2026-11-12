@@ -7,7 +7,7 @@ import {
   fetchClerkUserId,
   pollDeviceToken,
   startDeviceAuthorization,
-} from "../src/trigger/clerk-device-flow.js";
+} from "../src/agent/clerk-device-flow.js";
 
 const clerk = clerkOAuthConfigFromEnv();
 const auth = await startDeviceAuthorization(clerk);

@@ -53,6 +53,7 @@ ul{margin:8px 0 0;padding-left:20px;color:var(--muted)}
 .stack{display:flex;flex-wrap:wrap;gap:8px;margin:0;padding:0;list-style:none}
 .stack li{background:var(--soft);color:var(--ink);padding:6px 12px;border-radius:999px;font-size:.9rem}
 footer{margin-top:56px;color:var(--muted);font-size:.9rem;text-align:center}
+footer a{color:var(--accent)}
 </style>
 </head>
 <body>
@@ -101,7 +102,7 @@ footer{margin-top:56px;color:var(--muted);font-size:.9rem;text-align:center}
   <p class="note">Every Telegram message first hits a Hono gateway that checks who is writing, whether they have an account and whether they have a plan or free chats left, before the agent runs.</p>
 </section>
 
-<footer>Persona Assist, a demo project.</footer>
+<footer>Built by Supratim Sarkar &middot; <a href="https://github.com/codewithsupra/ai-assistant">Source on GitHub</a></footer>
 </main>
 </body>
 </html>`

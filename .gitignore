@@ -27,7 +27,6 @@ lerna-debug.log*
 # misc
 .DS_Store
 .neon
-.trigger
 
 # local browser tooling
 .playwright-mcp

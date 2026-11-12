@@ -78,5 +78,4 @@ Render runs `npm install --include=dev && npm run build`, then `npm start`. Run 
 
 ## Notes
 
-- `src/trigger/` and `trigger.config.ts` are from an earlier Trigger.dev-based version and are not used by the running app.
 - Clerk is currently on a development instance and Billing uses Clerk's shared development payment gateway, so no real payments are taken. Going live needs a Clerk production instance on a domain you own and a Stripe account.
